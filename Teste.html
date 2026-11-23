@@ -1,0 +1,1178 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Saúde SP - Localizador de UBS e UPA</title>
+    <link rel="stylesheet" href="Estilo.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+    <script src="site.js"></script>
+
+    <style>
+        :root {
+            --bg: #f2f5f4;
+            --surface: #ffffff;
+            --ink: #16302b;
+            --muted: #54706a;
+            --line: #d3dedb;
+            --upa: #c4322a;
+            --ubs: #1d6db5;
+            --you: #16302b;
+            --focus: #f2a900;
+            --radius: 10px;
+        }
+
+        #localizador {
+            font-family: "Atkinson Hyperlegible", system-ui, sans-serif;
+        }
+
+        #localizador .app {
+            display: grid;
+            grid-template-columns: 400px 1fr;
+            height: 700px;
+            max-width: 1200px;
+            margin: 0 auto;
+            overflow: hidden;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: var(--bg);
+        }
+
+        #localizador .panel {
+            padding: 28px 24px;
+            overflow-y: auto;
+            border-right: 1px solid var(--line);
+            background: var(--bg);
+        }
+
+        #localizador h1 {
+            font-size: 1.9rem;
+            line-height: 1.15;
+            margin: 0 0 8px;
+            letter-spacing: -0.01em;
+        }
+
+        #localizador .lead {
+            margin: 0 0 20px;
+            color: var(--muted);
+        }
+
+        #localizador .btn {
+            font: inherit;
+            font-weight: 700;
+            width: 100%;
+            padding: 14px 18px;
+            border: 0;
+            border-radius: var(--radius);
+            background: var(--ink);
+            color: var(--bg);
+            cursor: pointer;
+        }
+
+        #localizador .btn:hover {
+            filter: brightness(1.15);
+        }
+
+        #localizador .btn:disabled {
+            opacity: .6;
+            cursor: progress;
+        }
+
+        #localizador .ou {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 16px 0;
+            color: var(--muted);
+            font-size: .9rem;
+        }
+
+        #localizador .ou::before,
+        #localizador .ou::after {
+            content: "";
+            flex: 1;
+            height: 1px;
+            background: var(--line);
+        }
+
+        #localizador .busca label {
+            display: block;
+            font-size: .9rem;
+            color: var(--muted);
+            margin-bottom: 6px;
+        }
+
+        #localizador .busca .linha {
+            display: flex;
+            gap: 8px;
+        }
+
+        #localizador .busca input[type="search"] {
+            flex: 1;
+            min-width: 0;
+            font: inherit;
+            padding: 12px 14px;
+            border: 2px solid var(--line);
+            border-radius: var(--radius);
+            background: var(--surface);
+            color: var(--ink);
+        }
+
+        #localizador .busca input[type="search"]:focus-visible {
+            border-color: var(--ink);
+        }
+
+        #localizador .busca .btn {
+            width: auto;
+            padding: 12px 18px;
+        }
+
+        #localizador .filters {
+            display: flex;
+            gap: 8px;
+            margin: 16px 0 0;
+            padding: 0;
+            border: 0;
+        }
+
+        #localizador .filters legend {
+            font-size: .9rem;
+            color: var(--muted);
+            margin-bottom: 6px;
+            padding: 0;
+        }
+
+        #localizador .filters label {
+            flex: 1;
+            text-align: center;
+            padding: 9px 6px;
+            border: 2px solid var(--line);
+            border-radius: var(--radius);
+            background: var(--surface);
+            cursor: pointer;
+            font-weight: 700;
+            font-size: .95rem;
+        }
+
+        #localizador .filters input {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        #localizador .filters input:checked + span {
+            color: var(--bg);
+        }
+
+        #localizador .filters label:has(input:checked) {
+            background: var(--ink);
+            border-color: var(--ink);
+            color: var(--bg);
+        }
+
+        #localizador .status {
+            min-height: 1.5em;
+            margin: 14px 0 0;
+            color: var(--muted);
+            font-size: .95rem;
+        }
+
+        #localizador .status.error {
+            color: var(--upa);
+            font-weight: 700;
+        }
+
+        #localizador .nearest {
+            margin-top: 18px;
+            padding: 18px;
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-left: 8px solid var(--ink);
+            border-radius: var(--radius);
+        }
+
+        #localizador .nearest[hidden] {
+            display: none;
+        }
+
+        #localizador .nearest.tipo-upa {
+            border-left-color: var(--upa);
+        }
+
+        #localizador .nearest.tipo-ubs {
+            border-left-color: var(--ubs);
+        }
+
+        #localizador .tag {
+            display: inline-block;
+            font-weight: 700;
+            font-size: .85rem;
+            padding: 2px 10px;
+            border-radius: 99px;
+            color: #fff;
+            background: var(--ink);
+        }
+
+        #localizador .tipo-upa .tag {
+            background: #c4322a;
+        }
+
+        #localizador .tipo-ubs .tag {
+            background: #1d6db5;
+        }
+
+        #localizador .nearest h2 {
+            margin: 10px 0 2px;
+            font-size: 1.35rem;
+            line-height: 1.25;
+        }
+
+        #localizador .dist {
+            font-size: 2rem;
+            font-weight: 700;
+            margin: 6px 0 2px;
+        }
+
+        #localizador .addr {
+            color: var(--muted);
+            margin: 0 0 14px;
+            font-size: .95rem;
+        }
+
+        #localizador .route {
+            display: inline-block;
+            padding: 10px 16px;
+            border-radius: var(--radius);
+            border: 2px solid var(--ink);
+            color: var(--ink);
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        #localizador .route:hover {
+            background: var(--ink);
+            color: var(--bg);
+        }
+
+        #localizador .others {
+            margin-top: 22px;
+        }
+
+        #localizador .others h3 {
+            font-size: 1rem;
+            margin: 0 0 8px;
+        }
+
+        #localizador .others ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        #localizador .others li {
+            margin-bottom: 6px;
+        }
+
+        #localizador .others button {
+            font: inherit;
+            width: 100%;
+            text-align: left;
+            display: grid;
+            grid-template-columns: 14px 1fr auto;
+            gap: 10px;
+            align-items: center;
+            padding: 10px 12px;
+            background: var(--surface);
+            color: var(--ink);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            cursor: pointer;
+        }
+
+        #localizador .others button:hover {
+            border-color: var(--ink);
+        }
+
+        #localizador .dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: var(--ink);
+        }
+
+        #localizador .dot.upa {
+            background: var(--upa);
+        }
+
+        #localizador .dot.ubs {
+            background: var(--ubs);
+        }
+
+        #localizador .others .km {
+            color: var(--muted);
+            font-size: .9rem;
+            white-space: nowrap;
+        }
+
+        #localizador .catalogo {
+            margin-top: 22px;
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            background: var(--surface);
+            padding: 12px 14px;
+        }
+
+        #localizador .catalogo summary {
+            font-weight: 700;
+            cursor: pointer;
+            list-style: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #localizador .catalogo summary::-webkit-details-marker {
+            display: none;
+        }
+
+        #localizador .catalogo summary::after {
+            content: "+";
+            font-size: 1.2rem;
+            color: var(--muted);
+        }
+
+        #localizador .catalogo[open] summary::after {
+            content: "−";
+        }
+
+        #localizador .catalogo-lista {
+            list-style: none;
+            margin: 12px 0 0;
+            padding: 0;
+            max-height: 260px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        #localizador .catalogo-lista button {
+            font: inherit;
+            width: 100%;
+            text-align: left;
+            display: grid;
+            grid-template-columns: 12px 1fr;
+            gap: 10px;
+            align-items: start;
+            padding: 8px 10px;
+            background: var(--bg);
+            color: var(--ink);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        #localizador .catalogo-lista button:hover {
+            border-color: var(--ink);
+        }
+
+        #localizador .catalogo-lista .dot {
+            margin-top: 5px;
+            width: 12px;
+            height: 12px;
+        }
+
+        #localizador .catalogo-lista small {
+            display: block;
+            color: var(--muted);
+            font-size: .82rem;
+        }
+
+        #localizador .emergency {
+            margin-top: 24px;
+            padding: 12px 14px;
+            border: 2px solid var(--upa);
+            border-radius: var(--radius);
+            font-size: .95rem;
+        }
+
+        #localizador .credit {
+            margin: 18px 0 0;
+            font-size: .8rem;
+            color: var(--muted);
+        }
+
+        #localizador #map {
+            height: 100%;
+            min-height: 320px;
+            background: #dfe7e4;
+        }
+
+        #localizador .pin {
+            width: 30px;
+            height: 30px;
+            border-radius: 50% 50% 50% 0;
+            transform: rotate(-45deg);
+            border: 3px solid #fff;
+            box-shadow: 0 2px 6px rgba(0,0,0,.4);
+        }
+
+        #localizador .pin.upa {
+            background: #c4322a;
+        }
+
+        #localizador .pin.ubs {
+            background: #1d6db5;
+        }
+
+        #localizador .pin.big {
+            width: 40px;
+            height: 40px;
+        }
+
+        #localizador .you {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #16302b;
+            border: 3px solid #fff;
+            box-shadow: 0 0 0 6px rgba(22,48,43,.25);
+        }
+
+        @media (max-width: 800px) {
+            #localizador .app {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto 55vh;
+                height: auto;
+            }
+
+            #localizador .panel {
+                border-right: 0;
+                overflow: visible;
+            }
+
+            #localizador #map {
+                height: 55vh;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<nav class="navbar">
+    <div class="container">
+        <div class="logo">
+            <i class="fas fa-hospital-user"></i>
+            <span>Saúde SP</span>
+        </div>
+        <ul class="nav-menu">
+            <li><a href="#home">Início</a></li>
+            <li><a href="#ubs-upa">UBS e UPA</a></li>
+            <li><a href="#vacinas">Vacinas</a></li>
+            <li><a href="#localizador">Localizador</a></li>
+            <li><a href="#contato">Contato</a></li>
+        </ul>
+        <div class="hamburger">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+    </div>
+</nav>
+
+<section id="home" class="hero">
+    <div class="hero-content">
+        <h1>Bem-vindo ao Portal de Saúde de São Paulo</h1>
+        <p>Encontre UBS e UPA próximas a você e mantenha suas vacinas em dia</p>
+        <a class="btn btn-primary" href="#localizador">Encontrar Unidade</a>
+    </div>
+</section>
+
+<section id="ubs-upa" class="section">
+    <div class="container">
+        <h2>O que são UBS e UPA?</h2>
+        <div class="info-grid">
+            <div class="info-card">
+                <div class="icon">
+                    <i class="fas fa-clinic-medical"></i>
+                </div>
+                <h3>UBS - Unidade Básica de Saúde</h3>
+                <p>A UBS é a porta de entrada do Sistema Único de Saúde (SUS). Oferece atendimento básico, consultas, vacinas, preventivos e medicações para problemas de saúde comuns.</p>
+                <ul class="services-list">
+                    <li><i class="fas fa-check"></i> Consultas médicas</li>
+                    <li><i class="fas fa-check"></i> Vacinação</li>
+                    <li><i class="fas fa-check"></i> Preventivos</li>
+                    <li><i class="fas fa-check"></i> Encaminhamentos</li>
+                </ul>
+            </div>
+
+            <div class="info-card">
+                <div class="icon">
+                    <i class="fas fa-ambulance"></i>
+                </div>
+                <h3>UPA - Unidade de Pronto Atendimento</h3>
+                <p>A UPA funciona 24 horas para atender emergências e urgências que não requerem internação hospitalar. É ideal para situações que precisam de atendimento rápido.</p>
+                <ul class="services-list">
+                    <li><i class="fas fa-check"></i> Atendimento 24h</li>
+                    <li><i class="fas fa-check"></i> Emergências e urgências</li>
+                    <li><i class="fas fa-check"></i> Exames rápidos</li>
+                    <li><i class="fas fa-check"></i> Medicamentos</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="comparison-table">
+            <h3>Comparação: UBS x UPA</h3>
+            <table>
+                <tr>
+                    <th>Aspecto</th>
+                    <th>UBS</th>
+                    <th>UPA</th>
+                </tr>
+                <tr>
+                    <td>Horário de Funcionamento</td>
+                    <td>Seg-Sex (7h-17h)</td>
+                    <td>24 horas, 7 dias</td>
+                </tr>
+                <tr>
+                    <td>Tipo de Atendimento</td>
+                    <td>Rotina e prevenção</td>
+                    <td>Urgência e emergência</td>
+                </tr>
+                <tr>
+                    <td>Vacinação</td>
+                    <td>Sim</td>
+                    <td>Não (rotineira)</td>
+                </tr>
+                <tr>
+                    <td>Internação</td>
+                    <td>Não</td>
+                    <td>Não</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</section>
+
+<section id="vacinas" class="section bg-light">
+    <div class="container">
+        <h2>Vacinas Importantes</h2>
+        <p class="section-subtitle">Conheça as principais vacinas recomendadas e o que elas previnem</p>
+
+        <div class="vaccines-grid">
+            <div class="vaccine-card">
+                <div class="vaccine-header" style="background-color: #e74c3c;">
+                    <i class="fas fa-syringe"></i>
+                </div>
+                <h3>Tríplice Viral (SCR)</h3>
+                <p><strong>Previne:</strong> Sarampo, Caxumba e Rubéola</p>
+                <ul>
+                    <li>Dose 1: 12 meses</li>
+                    <li>Dose 2: 4-6 anos</li>
+                    <li>Reforço: conforme necessário</li>
+                </ul>
+            </div>
+
+            <div class="vaccine-card">
+                <div class="vaccine-header" style="background-color: #3498db;">
+                    <i class="fas fa-syringe"></i>
+                </div>
+                <h3>Poliomielite (VIP/VOP)</h3>
+                <p><strong>Previne:</strong> Paralisia Infantil</p>
+                <ul>
+                    <li>Série inicial: 2, 4 e 6 meses</li>
+                    <li>Reforço: 15 meses e 4-6 anos</li>
+                    <li>Fundamental para crianças</li>
+                </ul>
+            </div>
+
+            <div class="vaccine-card">
+                <div class="vaccine-header" style="background-color: #2ecc71;">
+                    <i class="fas fa-syringe"></i>
+                </div>
+                <h3>Difteria, Tétano e Coqueluche</h3>
+                <p><strong>Previne:</strong> DTC</p>
+                <ul>
+                    <li>Série inicial: 2, 4 e 6 meses</li>
+                    <li>Reforço: 15 meses e 4-6 anos</li>
+                    <li>Adultos: a cada 10 anos</li>
+                </ul>
+            </div>
+
+            <div class="vaccine-card">
+                <div class="vaccine-header" style="background-color: #f39c12;">
+                    <i class="fas fa-syringe"></i>
+                </div>
+                <h3>Hepatite B</h3>
+                <p><strong>Previne:</strong> Hepatite B</p>
+                <ul>
+                    <li>Dose 1: Ao nascer</li>
+                    <li>Dose 2: 1 mês</li>
+                    <li>Dose 3: 6 meses</li>
+                </ul>
+            </div>
+
+            <div class="vaccine-card">
+                <div class="vaccine-header" style="background-color: #9b59b6;">
+                    <i class="fas fa-syringe"></i>
+                </div>
+                <h3>Influenza</h3>
+                <p><strong>Previne:</strong> Gripe</p>
+                <ul>
+                    <li>Anualmente</li>
+                    <li>Especialmente para idosos</li>
+                    <li>E crianças menores de 5 anos</li>
+                </ul>
+            </div>
+
+            <div class="vaccine-card">
+                <div class="vaccine-header" style="background-color: #e67e22;">
+                    <i class="fas fa-syringe"></i>
+                </div>
+                <h3>COVID-19</h3>
+                <p><strong>Previne:</strong> Coronavirus</p>
+                <ul>
+                    <li>Série inicial: 2 doses</li>
+                    <li>Reforços anuais</li>
+                    <li>Disponível em UBS</li>
+                </ul>
+            </div>
+
+            <div class="vaccine-card">
+                <div class="vaccine-header" style="background-color: #1abc9c;">
+                    <i class="fas fa-syringe"></i>
+                </div>
+                <h3>Febre Amarela</h3>
+                <p><strong>Previne:</strong> Febre Amarela</p>
+                <ul>
+                    <li>Recomendada para viajantes</li>
+                    <li>Dose única (na maioria dos casos)</li>
+                    <li>Válida por 10 anos</li>
+                </ul>
+            </div>
+
+            <div class="vaccine-card">
+                <div class="vaccine-header" style="background-color: #34495e;">
+                    <i class="fas fa-syringe"></i>
+                </div>
+                <h3>HPV</h3>
+                <p><strong>Previne:</strong> Câncer do Colo do Útero</p>
+                <ul>
+                    <li>Meninas: 9-14 anos</li>
+                    <li>Meninos: 11-14 anos</li>
+                    <li>3 doses no esquema</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="vaccine-info-box">
+            <h3><i class="fas fa-lightbulb"></i> Dica Importante</h3>
+            <p>Mantenha sua carteira de vacinação sempre em dia! Visite a UBS mais próxima para verificar quais vacinas você ainda precisa tomar. Todas as vacinas do calendário básico são gratuitas pelo SUS.</p>
+        </div>
+    </div>
+</section>
+
+<section id="localizador" class="section">
+    <div class="container">
+        <div class="app">
+            <section class="panel" aria-labelledby="titulo">
+                <h1 id="titulo">Unidade de saúde mais próxima</h1>
+                <p class="lead">Encontre a UPA ou a UBS mais perto de você na cidade de São Paulo.</p>
+
+                <button class="btn" id="buscar" type="button">Usar minha localização</button>
+
+                <div class="ou">ou</div>
+
+                <form class="busca" id="form-bairro" role="search">
+                    <label for="bairro">Buscar por bairro ou endereço em São Paulo</label>
+                    <div class="linha">
+                        <input type="search" id="bairro" name="bairro" placeholder="Ex.: Vila Mariana ou Rua Augusta" autocomplete="off" required>
+                        <button class="btn" id="btn-bairro" type="submit">Buscar</button>
+                    </div>
+                </form>
+
+                <fieldset class="filters">
+                    <legend>Mostrar</legend>
+                    <label><input type="radio" name="tipo" value="todos" checked><span>UPA e UBS</span></label>
+                    <label><input type="radio" name="tipo" value="upa"><span>Só UPA</span></label>
+                    <label><input type="radio" name="tipo" value="ubs"><span>Só UBS</span></label>
+                </fieldset>
+
+                <p class="status" id="status" role="status" aria-live="polite"></p>
+
+                <article class="nearest" id="nearest" hidden>
+                    <span class="tag" id="n-tipo"></span>
+                    <h2 id="n-nome"></h2>
+                    <p class="dist" id="n-dist"></p>
+                    <p class="addr" id="n-end"></p>
+                    <a class="route" id="n-rota" target="_blank" rel="noopener">Traçar rota</a>
+                </article>
+
+                <div class="others" id="others" hidden>
+                    <h3>Outras unidades por perto</h3>
+                    <ul id="lista"></ul>
+                </div>
+
+                <details class="catalogo" open>
+                    <summary>Lista fixa de UPAs e UBSs em SP (<span id="qtd-fixa">0</span>)</summary>
+                    <ul class="catalogo-lista" id="lista-fixa"></ul>
+                </details>
+
+                <p class="emergency"><strong>Emergência?</strong> Ligue para o SAMU no <strong>192</strong>. Não espere chegar a uma unidade.</p>
+                <p class="credit">Base local combinada com dados do OpenStreetMap. Confirme o funcionamento da unidade antes de ir.</p>
+            </section>
+
+            <div id="map" role="application" aria-label="Mapa com as unidades de saúde"></div>
+        </div>
+    </div>
+</section>
+
+<section class="section bg-light">
+    <div class="container">
+        <h2>Dicas de Saúde Importantes</h2>
+        <div class="tips-grid">
+            <div class="tip-card">
+                <div class="tip-icon" style="background-color: #e74c3c;">
+                    <i class="fas fa-hand-holding-medical"></i>
+                </div>
+                <h3>Higiene Pessoal</h3>
+                <p>Lave as mãos frequentemente, especialmente antes de comer e após usar o banheiro. Use álcool gel quando necessário.</p>
+            </div>
+
+            <div class="tip-card">
+                <div class="tip-icon" style="background-color: #3498db;">
+                    <i class="fas fa-apple-alt"></i>
+                </div>
+                <h3>Alimentação Saudável</h3>
+                <p>Consuma alimentos naturais, frutas e vegetais. Evite alimentos ultra-processados e reduza o consumo de açúcar.</p>
+            </div>
+
+            <div class="tip-card">
+                <div class="tip-icon" style="background-color: #2ecc71;">
+                    <i class="fas fa-person-walking"></i>
+                </div>
+                <h3>Atividade Física</h3>
+                <p>Pratique pelo menos 150 minutos de atividade física moderada por semana. Caminhe, dance ou pratique seu esporte favorito.</p>
+            </div>
+
+            <div class="tip-card">
+                <div class="tip-icon" style="background-color: #9b59b6;">
+                    <i class="fas fa-bed"></i>
+                </div>
+                <h3>Sono de Qualidade</h3>
+                <p>Durma de 7 a 8 horas por noite. Mantenha uma rotina regular de sono para melhor saúde.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section id="contato" class="section">
+    <div class="container">
+        <h2>Entre em Contato</h2>
+        <div class="contact-grid">
+            <div class="contact-info">
+                <div class="contact-item">
+                    <i class="fas fa-phone"></i>
+                    <div>
+                        <h3>Telefone</h3>
+                        <p>Disque Saúde / OuvSUS: 136</p>
+                    </div>
+                </div>
+                <div class="contact-item">
+                    <i class="fas fa-envelope"></i>
+                    <div>
+                        <h3>Email</h3>
+                        <p>ouvidoriageral@saude.gov.br</p>
+                    </div>
+                </div>
+            </div>
+
+            <form class="contact-form" onsubmit="handleFormSubmit(event)">
+                <input type="text" placeholder="Seu Nome" required>
+                <input type="email" placeholder="Seu Email" required>
+                <textarea placeholder="Sua Mensagem" rows="5" required></textarea>
+                <button type="submit" class="btn btn-primary">Enviar Mensagem</button>
+            </form>
+        </div>
+    </div>
+</section>
+
+<footer class="footer">
+    <div class="container">
+        <p>&copy; 2026 Saúde SP - Localizador de UBS e UPA. Todos os direitos reservados.</p>
+        <p>Desenvolvido com <i class="fas fa-heart"></i> para a saúde da população paulista</p>
+    </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="teste.js"></script>
+
+<script>
+const BASE_UNIDADES = [
+    { id: "fixa-upa-1", nome: "UPA 24h Vergueiro", tipo: "upa", lat: -23.5686, lon: -46.6396, end: "Rua Vergueiro, 613 - Liberdade, São Paulo - SP" },
+    { id: "fixa-upa-2", nome: "UPA 24h Vila Mariana", tipo: "upa", lat: -23.5973, lon: -46.6366, end: "Rua Diogo de Faria, 1036 - Vila Clementino, São Paulo - SP" },
+    { id: "fixa-upa-3", nome: "UPA 24h Lapa", tipo: "upa", lat: -23.5236, lon: -46.7042, end: "Av. Queiroz Filho, 313 - Vila Leopoldina, São Paulo - SP" },
+    { id: "fixa-upa-4", nome: "UPA 24h Santo Amaro", tipo: "upa", lat: -23.6542, lon: -46.7097, end: "Rua Carlos Gomes, 661 - Santo Amaro, São Paulo - SP" },
+    { id: "fixa-upa-5", nome: "UPA 24h Campo Limpo", tipo: "upa", lat: -23.6335, lon: -46.7574, end: "Estrada do Campo Limpo, 4690 - Campo Limpo, São Paulo - SP" },
+    { id: "fixa-upa-6", nome: "UPA 24h Jardim Ângela", tipo: "upa", lat: -23.6881, lon: -46.7745, end: "Estrada do M'Boi Mirim, 4903 - Jardim Ângela, São Paulo - SP" },
+    { id: "fixa-upa-7", nome: "UPA 24h Pedreira", tipo: "upa", lat: -23.6946, lon: -46.6634, end: "Av. Nossa Senhora do Sabará, 4567 - Pedreira, São Paulo - SP" },
+    { id: "fixa-upa-8", nome: "UPA 24h Jabaquara", tipo: "upa", lat: -23.6508, lon: -46.6433, end: "Rua Cruz das Almas, 355 - Jabaquara, São Paulo - SP" },
+    { id: "fixa-upa-9", nome: "UPA 24h Ipiranga", tipo: "upa", lat: -23.6062, lon: -46.6025, end: "Rua Silva Bueno, 821 - Ipiranga, São Paulo - SP" },
+    { id: "fixa-upa-10", nome: "UPA 24h Mooca", tipo: "upa", lat: -23.5621, lon: -46.5938, end: "Rua Taquari, 549 - Mooca, São Paulo - SP" },
+    { id: "fixa-upa-11", nome: "UPA 24h Tatuapé", tipo: "upa", lat: -23.5418, lon: -46.5712, end: "Av. Celso Garcia, 4974 - Tatuapé, São Paulo - SP" },
+    { id: "fixa-upa-12", nome: "UPA 24h Carrão / Masagão", tipo: "upa", lat: -23.5567, lon: -46.5359, end: "Av. Conselheiro Carrão, 2500 - Vila Carrão, São Paulo - SP" },
+    { id: "fixa-upa-13", nome: "UPA 24h Ermelino Matarazzo", tipo: "upa", lat: -23.4952, lon: -46.4851, end: "Av. Paranaguá, 1520 - Ermelino Matarazzo, São Paulo - SP" },
+    { id: "fixa-upa-14", nome: "UPA 24h Itaquera / Júlio Tupy", tipo: "upa", lat: -23.5425, lon: -46.4528, end: "Rua Serra da Queimada, 800 - Itaquera, São Paulo - SP" },
+    { id: "fixa-upa-15", nome: "UPA 24h São Miguel Paulista", tipo: "upa", lat: -23.4981, lon: -46.4368, end: "Rua José Oiticica Filho, 300 - São Miguel Paulista, São Paulo - SP" },
+    { id: "fixa-upa-16", nome: "UPA 24h Cidade Tiradentes", tipo: "upa", lat: -23.5882, lon: -46.4021, end: "Av. dos Metalúrgicos, 1945 - Cidade Tiradentes, São Paulo - SP" },
+    { id: "fixa-upa-17", nome: "UPA 24h Jaçanã", tipo: "upa", lat: -23.4628, lon: -46.5824, end: "Av. Benjamin Pereira, 401 - Jaçanã, São Paulo - SP" },
+    { id: "fixa-upa-18", nome: "UPA 24h Vila Maria / Parque Novo Mundo", tipo: "upa", lat: -23.5134, lon: -46.5721, end: "Praça Engenheiro Hugo Brandi, 15 - Vila Maria, São Paulo - SP" },
+    { id: "fixa-upa-19", nome: "UPA 24h Perus", tipo: "upa", lat: -23.4079, lon: -46.7458, end: "Rua Júlio Maciel, 40 - Perus, São Paulo - SP" },
+    { id: "fixa-upa-20", nome: "UPA 24h Pirituba", tipo: "upa", lat: -23.4832, lon: -46.7274, end: "Av. Raimundo Pereira de Magalhães, 5214 - Pirituba, São Paulo - SP" },
+
+    { id: "fixa-ubs-1", nome: "UBS Sé", tipo: "ubs", lat: -23.5535, lon: -46.6311, end: "Rua Frederico Alvarenga, 259 - Sé, São Paulo - SP" },
+    { id: "fixa-ubs-2", nome: "UBS Santa Cecília", tipo: "ubs", lat: -23.5356, lon: -46.6487, end: "Rua Vitorino Carmilo, 599 - Santa Cecília, São Paulo - SP" },
+    { id: "fixa-ubs-3", nome: "UBS Humaitá / Bela Vista", tipo: "ubs", lat: -23.5579, lon: -46.6438, end: "Rua Humaitá, 520 - Bela Vista, São Paulo - SP" },
+    { id: "fixa-ubs-4", nome: "UBS Jardim Edite", tipo: "ubs", lat: -23.6095, lon: -46.6968, end: "Rua Charles Coulomb, 80 - Brooklin, São Paulo - SP" },
+    { id: "fixa-ubs-5", nome: "UBS Vila Romana", tipo: "ubs", lat: -23.5269, lon: -46.6961, end: "Rua Vespasiano, 679 - Vila Romana, São Paulo - SP" },
+    { id: "fixa-ubs-6", nome: "UBS Alto de Pinheiros", tipo: "ubs", lat: -23.5532, lon: -46.7069, end: "Av. Padre Pereira de Andrade, 105 - Alto de Pinheiros, São Paulo - SP" },
+    { id: "fixa-ubs-7", nome: "UBS Butantã", tipo: "ubs", lat: -23.5718, lon: -46.7126, end: "Rua Cabral de Menezes, 51 - Butantã, São Paulo - SP" },
+    { id: "fixa-ubs-8", nome: "UBS Santana", tipo: "ubs", lat: -23.4955, lon: -46.6258, end: "Rua Voluntários da Pátria, 4301 - Santana, São Paulo - SP" },
+    { id: "fixa-ubs-9", nome: "UBS Casa Verde", tipo: "ubs", lat: -23.5048, lon: -46.6569, end: "Rua Ferreira de Almeida, 45 - Casa Verde, São Paulo - SP" },
+    { id: "fixa-ubs-10", nome: "UBS Tucuruvi", tipo: "ubs", lat: -23.4796, lon: -46.6031, end: "Av. Nova Cantareira, 1467 - Tucuruvi, São Paulo - SP" },
+    { id: "fixa-ubs-11", nome: "UBS Belenzinho", tipo: "ubs", lat: -23.5398, lon: -46.5924, end: "Rua Cajuru, 650 - Belenzinho, São Paulo - SP" },
+    { id: "fixa-ubs-12", nome: "UBS Vila Prudente", tipo: "ubs", lat: -23.5844, lon: -46.5812, end: "Praça Centenário de Vila Prudente, 108 - Vila Prudente, São Paulo - SP" },
+    { id: "fixa-ubs-13", nome: "UBS Penha", tipo: "ubs", lat: -23.5245, lon: -46.5441, end: "Rua Nossa Senhora da Penha, 52 - Penha, São Paulo - SP" },
+    { id: "fixa-ubs-14", nome: "UBS Cidade Líder", tipo: "ubs", lat: -23.5642, lon: -46.4895, end: "Av. Maria Luiza Americano, 1980 - Cidade Líder, São Paulo - SP" },
+    { id: "fixa-ubs-15", nome: "UBS Guaianases", tipo: "ubs", lat: -23.5421, lon: -46.4156, end: "Rua Comandante Carlos Ruhl, 134 - Guaianases, São Paulo - SP" },
+    { id: "fixa-ubs-16", nome: "UBS Santo Amaro / Largo 13", tipo: "ubs", lat: -23.6525, lon: -46.7052, end: "Rua Conde de Itu, 359 - Santo Amaro, São Paulo - SP" },
+    { id: "fixa-ubs-17", nome: "UBS Capão Redondo", tipo: "ubs", lat: -23.6684, lon: -46.7798, end: "Av. Comendador Sant'Anna, 774 - Capão Redondo, São Paulo - SP" },
+    { id: "fixa-ubs-18", nome: "UBS Grajaú", tipo: "ubs", lat: -23.7485, lon: -46.6962, end: "Rua Giovanni Bononcini, 77 - Grajaú, São Paulo - SP" },
+    { id: "fixa-ubs-19", nome: "UBS Saúde / Bosque da Saúde", tipo: "ubs", lat: -23.6184, lon: -46.6345, end: "Rua João Batista de Oliveira, 132 - Saúde, São Paulo - SP" },
+    { id: "fixa-ubs-20", nome: "UBS Vila Matilde", tipo: "ubs", lat: -23.5361, lon: -46.5262, end: "Rua Marvão, 128 - Vila Matilde, São Paulo - SP" }
+];
+
+const RAIOS_KM = [3, 8, 20];
+const SP = { oeste: -46.826, norte: -23.356, leste: -46.365, sul: -24.008 };
+const dentroDeSP = (lat, lon) => lat <= SP.norte && lat >= SP.sul && lon >= SP.oeste && lon <= SP.leste;
+const OVERPASS = [
+    "https://overpass-api.de/api/interpreter",
+    "https://overpass.kumi.systems/api/interpreter"
+];
+
+const $ = (id) => document.getElementById(id);
+const btn = $("buscar"), statusEl = $("status");
+
+const map = L.map("map").setView([-23.55, -46.63], 11);
+L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    attribution: "&copy; colaboradores do OpenStreetMap"
+}).addTo(map);
+
+let camada = L.layerGroup().addTo(map);
+let posicao = null;
+let rotuloOrigem = "Você está aqui";
+let unidades = [];
+let marcadores = new Map();
+
+const iconePin = (tipo, grande) => L.divIcon({
+    className: "",
+    html: `<div class="pin ${tipo} ${grande ? "big" : ""}"></div>`,
+    iconSize: grande ? [40, 40] : [30, 30],
+    iconAnchor: grande ? [20, 40] : [15, 30]
+});
+const iconeVoce = L.divIcon({ className: "", html: '<div class="you"></div>', iconSize: [18, 18], iconAnchor: [9, 9] });
+
+function mensagem(texto, erro = false) {
+    statusEl.textContent = texto;
+    statusEl.classList.toggle("error", erro);
+}
+
+function distanciaKm(a, b) {
+    const R = 6371, rad = (x) => x * Math.PI / 180;
+    const dLat = rad(b.lat - a.lat), dLon = rad(b.lon - a.lon);
+    const h = Math.sin(dLat / 2) ** 2 +
+              Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLon / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(h));
+}
+
+const formatarDist = (km) => km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1).replace(".", ",")} km`;
+
+function classificar(nome) {
+    if (/\bUPA\b|pronto[\s-]*atendimento|unidade de pronto/i.test(nome)) return "upa";
+    if (/\bUBS\b|\bUSF\b|unidade b[áa]sica|posto de sa[úu]de|\bAMA\b/i.test(nome)) return "ubs";
+    return null;
+}
+
+function endereco(tags) {
+    const partes = [
+        [tags["addr:street"], tags["addr:housenumber"]].filter(Boolean).join(", "),
+        tags["addr:suburb"] || tags["addr:neighbourhood"],
+        tags["addr:city"]
+    ].filter(Boolean);
+    return partes.join(" - ") || "Endereço não informado no mapa";
+}
+
+function escapar(s) {
+    return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+function renderizarListaFixa() {
+    const filtro = tipoFiltro();
+    const filtradas = BASE_UNIDADES.filter((u) => filtro === "todos" || u.tipo === filtro);
+    $("qtd-fixa").textContent = filtradas.length;
+
+    const ul = $("lista-fixa");
+    ul.innerHTML = "";
+    filtradas.forEach((u) => {
+        const li = document.createElement("li");
+        const b = document.createElement("button");
+        b.type = "button";
+        b.innerHTML = `<span class="dot ${u.tipo}"></span><span><strong>${escapar(u.nome)}</strong><small>${escapar(u.end)}</small></span>`;
+        b.addEventListener("click", () => {
+            if (!posicao) {
+                camada.clearLayers();
+                marcadores.clear();
+                const m = L.marker([u.lat, u.lon], { icon: iconePin(u.tipo, true), title: u.nome })
+                    .addTo(camada)
+                    .bindPopup(`<strong>${escapar(u.nome)}</strong><br>${escapar(u.end)}`)
+                    .openPopup();
+                marcadores.set(u.id, m);
+                map.flyTo([u.lat, u.lon], 16);
+            } else {
+                map.flyTo([u.lat, u.lon], 16);
+                const m = marcadores.get(u.id) || L.marker([u.lat, u.lon], { icon: iconePin(u.tipo, false), title: u.nome })
+                    .addTo(camada)
+                    .bindPopup(`<strong>${escapar(u.nome)}</strong><br>${escapar(u.end)}`);
+                marcadores.set(u.id, m);
+                m.openPopup();
+            }
+        });
+        li.appendChild(b);
+        ul.appendChild(li);
+    });
+}
+
+function mostrarPinsIniciais() {
+    camada.clearLayers();
+    BASE_UNIDADES.forEach((u) => {
+        L.marker([u.lat, u.lon], { icon: iconePin(u.tipo, false), title: u.nome })
+            .addTo(camada)
+            .bindPopup(`<strong>${escapar(u.nome)}</strong><br>${escapar(u.end)}`);
+    });
+}
+
+async function consultar(lat, lon, raioKm) {
+    const r = raioKm * 1000;
+    const consulta = `[out:json][timeout:25];
+      area["boundary"="administrative"]["admin_level"="8"]["wikidata"="Q174"]->.sp;
+      nwr(area.sp)(around:${r},${lat},${lon})["name"~"UPA|UBS|USF|Unidade B.sica|Pronto.Atendimento|Unidade de Pronto|Posto de Sa.de",i];
+      out center tags;`;
+    let ultimoErro;
+    for (const url of OVERPASS) {
+        try {
+            const resp = await fetch(url, {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: "data=" + encodeURIComponent(consulta)
+            });
+            if (!resp.ok) throw new Error("HTTP " + resp.status);
+            return (await resp.json()).elements;
+        } catch (e) {
+            ultimoErro = e;
+        }
+    }
+    throw ultimoErro;
+}
+
+function calcularFixasProximas(lat, lon) {
+    return BASE_UNIDADES.map((u) => ({
+        ...u,
+        km: distanciaKm({ lat, lon }, { lat: u.lat, lon: u.lon })
+    })).sort((a, b) => a.km - b.km);
+}
+
+async function buscarUnidades(lat, lon) {
+    const fixasComDist = calcularFixasProximas(lat, lon);
+    try {
+        for (const raio of RAIOS_KM) {
+            mensagem(`Procurando unidades em até ${raio} km...`);
+            const elementos = await consultar(lat, lon, raio);
+            const achadas = elementos.map((el) => {
+                const tags = el.tags || {};
+                const nome = tags.name || "";
+                const tipo = classificar(nome);
+                const pos = { lat: el.lat ?? el.center?.lat, lon: el.lon ?? el.center?.lon };
+                if (!tipo || pos.lat == null) return null;
+                return { id: el.type + el.id, nome, tipo, ...pos, end: endereco(tags), km: distanciaKm({ lat, lon }, pos) };
+            }).filter(Boolean);
+
+            const combinadas = [...achadas, ...fixasComDist.filter((f) => f.km <= raio)];
+            const vistos = new Set();
+            const unicas = combinadas.filter((u) => {
+                const chave = u.tipo + u.lat.toFixed(3) + u.lon.toFixed(3);
+                if (vistos.has(chave)) return false;
+                vistos.add(chave);
+                return true;
+            });
+            if (unicas.length) return unicas.sort((a, b) => a.km - b.km);
+        }
+    } catch (e) {
+        console.warn("Overpass indisponível, usando lista fixa:", e);
+    }
+    return fixasComDist;
+}
+
+function tipoFiltro() {
+    return document.querySelector('input[name="tipo"]:checked').value;
+}
+
+function desenhar() {
+    camada.clearLayers();
+    marcadores.clear();
+    L.marker([posicao.lat, posicao.lon], { icon: iconeVoce, title: rotuloOrigem, keyboard: false }).addTo(camada);
+
+    const filtro = tipoFiltro();
+    const visiveis = unidades.filter((u) => filtro === "todos" || u.tipo === filtro);
+
+    if (!visiveis.length) {
+        $("nearest").hidden = true;
+        $("others").hidden = true;
+        mensagem(`Nenhuma ${filtro.toUpperCase()} encontrada. Tente "UPA e UBS".`, true);
+        map.setView([posicao.lat, posicao.lon], 14);
+        return;
+    }
+
+    const mais = visiveis[0];
+    visiveis.slice(0, 8).forEach((u, i) => {
+        const m = L.marker([u.lat, u.lon], { icon: iconePin(u.tipo, i === 0), title: u.nome, zIndexOffset: i === 0 ? 1000 : 0 })
+            .addTo(camada)
+            .bindPopup(`<strong>${escapar(u.nome)}</strong><br>${u.tipo.toUpperCase()} · ${formatarDist(u.km)}`);
+        marcadores.set(u.id, m);
+    });
+
+    const card = $("nearest");
+    card.hidden = false;
+    card.className = "nearest tipo-" + mais.tipo;
+    $("n-tipo").textContent = mais.tipo.toUpperCase();
+    $("n-nome").textContent = mais.nome;
+    $("n-dist").textContent = formatarDist(mais.km);
+    $("n-end").textContent = mais.end;
+    $("n-rota").href = `https://www.google.com/maps/dir/?api=1&origin=${posicao.lat},${posicao.lon}&destination=${mais.lat},${mais.lon}`;
+
+    const lista = $("lista");
+    lista.innerHTML = "";
+    visiveis.slice(1, 6).forEach((u) => {
+        const li = document.createElement("li");
+        const b = document.createElement("button");
+        b.type = "button";
+        b.innerHTML = `<span class="dot ${u.tipo}"></span><span>${escapar(u.nome)}</span><span class="km">${formatarDist(u.km)}</span>`;
+        b.addEventListener("click", () => {
+            map.flyTo([u.lat, u.lon], 16);
+            marcadores.get(u.id)?.openPopup();
+        });
+        li.appendChild(b);
+        lista.appendChild(li);
+    });
+    $("others").hidden = visiveis.length < 2;
+
+    mensagem("");
+    marcadores.get(mais.id)?.openPopup();
+    map.fitBounds(L.latLngBounds([[posicao.lat, posicao.lon], [mais.lat, mais.lon]]), { padding: [60, 60], maxZoom: 16 });
+}
+
+async function executarBusca(lat, lon, rotulo) {
+    posicao = { lat, lon };
+    rotuloOrigem = rotulo;
+    btn.disabled = true;
+    $("btn-bairro").disabled = true;
+    try {
+        unidades = await buscarUnidades(lat, lon);
+        desenhar();
+    } finally {
+        btn.disabled = false;
+        $("btn-bairro").disabled = false;
+    }
+}
+
+function localizar() {
+    if (!("geolocation" in navigator)) {
+        mensagem("Seu navegador não permite obter a localização.", true);
+        return;
+    }
+
+    btn.disabled = true;
+    mensagem("Obtendo sua localização...");
+
+    navigator.geolocation.getCurrentPosition(
+        (pos) => {
+            const { latitude, longitude } = pos.coords;
+            if (!dentroDeSP(latitude, longitude)) {
+                btn.disabled = false;
+                mensagem("Você parece estar fora da cidade de São Paulo. Busque por um bairro da cidade.", true);
+                return;
+            }
+            executarBusca(latitude, longitude, "Você está aqui");
+        },
+        (erro) => {
+            btn.disabled = false;
+            const motivos = {
+                1: "Permissão negada. Libere a localização nas configurações do navegador ou busque pelo bairro.",
+                2: "Não foi possível determinar onde você está. Tente buscar pelo bairro.",
+                3: "A localização demorou demais. Tente de novo ou busque pelo bairro."
+            };
+            let texto = motivos[erro.code] || "Erro ao obter a localização.";
+            if (location.protocol === "file:") {
+                texto += " Você abriu o arquivo direto do computador, o que costuma bloquear a localização. Abra por http://localhost ou publique em https.";
+            }
+            mensagem(texto, true);
+        },
+        { enableHighAccuracy: false, timeout: 20000, maximumAge: 300000 }
+    );
+}
+
+async function buscarPorBairro(texto) {
+    mensagem(`Procurando "${texto}"...`);
+    $("btn-bairro").disabled = true;
+    try {
+        const consultaTexto = /s[ãa]o paulo/i.test(texto) ? texto : texto + ", São Paulo";
+        const caixa = `${SP.oeste},${SP.norte},${SP.leste},${SP.sul}`;
+        const url = "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=br&accept-language=pt-BR" +
+                    `&viewbox=${caixa}&bounded=1&q=` + encodeURIComponent(consultaTexto);
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error("HTTP " + resp.status);
+        const resultados = await resp.json();
+        if (!resultados.length) {
+            mensagem("Não encontramos esse local na cidade de São Paulo. Confira o nome do bairro ou da rua.", true);
+            $("btn-bairro").disabled = false;
+            return;
+        }
+        const r = resultados[0];
+        const rotulo = "Região buscada: " + r.display_name.split(",").slice(0, 2).join(",").trim();
+        await executarBusca(parseFloat(r.lat), parseFloat(r.lon), rotulo);
+    } catch (e) {
+        mensagem("Não foi possível buscar esse local agora. Verifique a internet e tente de novo.", true);
+        $("btn-bairro").disabled = false;
+    }
+}
+
+$("form-bairro").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const texto = $("bairro").value.trim();
+    if (texto) buscarPorBairro(texto);
+});
+
+btn.addEventListener("click", localizar);
+document.querySelectorAll('input[name="tipo"]').forEach((r) =>
+    r.addEventListener("change", () => {
+        renderizarListaFixa();
+        if (posicao && unidades.length) desenhar();
+    })
+);
+
+renderizarListaFixa();
+mostrarPinsIniciais();
+</script>
+</body>
+</html>
